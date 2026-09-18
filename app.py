@@ -109,7 +109,8 @@ if st.session_state.script_data:
                         
                         if scene_idx in st.session_state.scene_videos:
                             st.success(f"✅ Đã render xong Cảnh {scene_idx}!")
-                            st.video("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4")
+                            # Sử dụng link video chuẩn MP4 có sẵn thời lượng trực tiếp
+                            st.video("https://www.w3schools.com/html/mov_bbb.mp4")
                         else:
                             st.info(f"⏳ Sẵn sàng render ({aspect_ratio})")
                         
@@ -154,9 +155,8 @@ if st.session_state.script_data:
                     st.success("🎉 Ghép nối thành công toàn bộ video thành 1 video tổng hoàn chỉnh!")
                     
                     st.markdown(
-                        '<a href="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" target="_blank">'
+                        '<a href="https://www.w3schools.com/html/mov_bbb.mp4" target="_blank">'
                         '<button style="background-color:#FF4B4B; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">'
                         '⬇️ Tải Xuống Video Tổng Master (.mp4)</button></a>',
                         unsafe_allow_html=True
                     )
-                    
