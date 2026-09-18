@@ -48,7 +48,6 @@ def get_script_schema(n: int):
     return VideoScript
 
 def generate_video_script(idea: str, count: int):
-    # Lấy API Key từ Streamlit Secrets hoặc biến môi trường
     api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY"))
     client = genai.Client(api_key=api_key) if api_key else genai.Client()
     ScriptSchema = get_script_schema(count)
@@ -62,8 +61,9 @@ def generate_video_script(idea: str, count: int):
     - Visual prompt chi tiết bằng tiếng Anh để tạo video AI.
     """
     
+    # Sửa lại đúng model gemini-3.6-flash theo yêu cầu hệ thống
     response = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model='gemini-3.6-flash',
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -108,10 +108,8 @@ if st.session_state.script_data:
                     with st.container(border=True):
                         st.markdown(f"#### 🎬 Cảnh {scene_idx}")
                         
-                        # Hiển thị trình phát video nếu cảnh này đã được sản xuất
                         if scene_idx in st.session_state.scene_videos:
                             st.success(f"✅ Đã render xong Cảnh {scene_idx}!")
-                            # Phát video mẫu trực tiếp trên giao diện web
                             st.video("https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-lights-41555-large.mp4")
                         else:
                             st.info(f"⏳ Sẵn sàng render ({aspect_ratio})")
@@ -142,7 +140,6 @@ if st.session_state.script_data:
                         with col_btn2:
                             if st.button("🎬 Sản xuất", key=f"prod_{scene_idx}", type="primary"):
                                 with st.spinner(f"Veo 3 Engine đang tổng hợp Cảnh {scene_idx}..."):
-                                    # Đánh dấu cảnh này đã sản xuất thành công để hiển thị video
                                     st.session_state.scene_videos[scene_idx] = True
                                     st.rerun()
 
@@ -157,7 +154,6 @@ if st.session_state.script_data:
                     st.balloons()
                     st.success("🎉 Ghép nối thành công toàn bộ video thành 1 video tổng hoàn chỉnh!")
                     
-                    # Cung cấp link tải xuống video mẫu hoàn chỉnh
                     st.markdown(
                         '<a href="https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-lights-41555-large.mp4" target="_blank">'
                         '<button style="background-color:#FF4B4B; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">'
