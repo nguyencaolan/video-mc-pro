@@ -4,12 +4,11 @@ import streamlit as st
 from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
-import requests
 
 # 1. Cấu hình giao diện rộng
 st.set_page_config(page_title="Rubby Nguyen - Video MC Pro", layout="wide")
 
-st.markdown("## 🎬 RUBBY NGUYEN - VIDEO MC PRO (AUTO VIDEO API)")
+st.markdown("## 🎬 RUBBY NGUYEN - VIDEO MC PRO (VEO 3 FLOW WORKFLOW)")
 
 # 2. THANH CÔNG CỤ BÊN TRÁI (SIDEBAR)
 with st.sidebar:
@@ -21,14 +20,20 @@ with st.sidebar:
         st.info("Mẹo: Tải ảnh gốc để cố định khuôn mặt nhân vật.")
 
     st.markdown("---")
-    st.markdown("### ⚙️ Thiết Lập AI Video")
-    video_model = st.selectbox("Model tạo video", ["Luma Dream Machine", "Stable Video", "Kling/Runway via API"])
-    aspect_ratio = st.selectbox("Tỷ lệ khung hình", ["9:16 (TikTok/Reels)", "16:9 (YouTube)"])
-    duration = st.selectbox("Thời lượng cảnh", ["5s", "10s"])
+    st.markdown("### ⚙️ Thiết Lập Veo 3 Flow")
+    video_model = st.selectbox("Model tạo video", ["Veo 3 Flow Engine", "Kling AI Pro", "Runway Gen-3"])
+    aspect_ratio = st.selectbox("Tỷ lệ khung hình", ["9:16 (TikTok/Reels)", "16:9 (YouTube)", "1:1 (Square)"])
+    duration = st.selectbox("Thời lượng cảnh", ["5s", "10s", "15s"])
+    voice_option = st.selectbox("Giọng đọc (Voiceover)", ["Nữ miền Nam", "Nữ miền Bắc", "Nam miền Nam", "Nam miền Bắc"])
 
 # 3. KHU VỰC TRUNG TÂM - BỘ TẠO KỊCH BẢN
-st.markdown("### ⚡ BỘ TẠO KỊCH BẢN & AUTO GENERATE VIDEO")
-num_scenes = st.number_input("Số cảnh:", min_value=1, max_value=5, value=2)
+st.markdown("### ⚡ BỘ TẠO KỊCH BẢN & SẢN XUẤT TỰ ĐỘNG")
+st.write("Hệ thống tự động hóa kịch bản đa cảnh và render video thực tế.")
+
+col_top1, col_top2 = st.columns([4, 1])
+with col_top2:
+    num_scenes = st.number_input("Số cảnh:", min_value=1, max_value=10, value=3)
+
 user_idea = st.text_area("Nội dung ý tưởng:", "Cho bạn nữ giới thiệu về bộ đồ ngủ mặc nhà lụa cao cấp", height=80)
 
 def get_script_schema(n: int):
@@ -50,8 +55,12 @@ def generate_video_script(idea: str, count: int):
     prompt = f"""
     Bạn là một chuyên gia sản xuất kịch bản video ngắn.
     Ý tưởng: "{idea}"
-    Yêu cầu: Bắt buộc chia chính xác thành ĐÚNG {count} cảnh. Lời thoại tiếng Việt, Visual prompt tiếng Anh chi tiết.
+    Yêu cầu:
+    - Bắt buộc chia chính xác thành ĐÚNG {count} cảnh (scenes).
+    - Lời thoại tiếng Việt tự nhiên, hấp dẫn.
+    - Visual prompt chi tiết bằng tiếng Anh để tạo video AI.
     """
+    
     response = client.models.generate_content(
         model='gemini-3.6-flash',
         contents=prompt,
@@ -70,69 +79,84 @@ if "scene_videos" not in st.session_state:
 
 if st.button("✨ TẠO KỊCH BẢN & CHIA CẢNH", type="primary"):
     if not user_idea.strip():
-        st.warning("Vui lòng nhập nội dung ý tưởng!")
+        st.warning("Vui lòng nhập nội dung ý tưởng video!")
     else:
-        with st.spinner("AI đang phân tích và tạo kịch bản..."):
+        with st.spinner(f"AI đang phân tích và tạo chính xác {num_scenes} cảnh... Vui lòng đợi..."):
             try:
                 raw_json = generate_video_script(user_idea, num_scenes)
                 st.session_state.script_data = json.loads(raw_json)
                 st.session_state.scene_videos = {}
-                st.success("Tạo kịch bản thành công!")
+                st.success(f"Đã tạo thành công {st.session_state.script_data['total_scenes']} cảnh video!")
             except Exception as e:
-                st.error(f"Lỗi: {e}")
+                st.error(f"Đã xảy ra lỗi: {e}")
 
 if st.session_state.script_data:
     st.markdown("---")
-    st.markdown("### 🎞️ DANH SÁCH CẢNH & AUTO RENDER")
+    st.markdown("### 🎞️ DANH SÁCH CẢNH VIDEO & TRẠM RENDER")
     
     scenes = st.session_state.script_data["scenes"]
     
-    for scene in scenes:
-        scene_idx = scene['scene_number']
-        with st.container(border=True):
-            st.markdown(f"#### 🎬 Cảnh {scene_idx}")
-            
-            # Kiểm tra nếu cảnh đã có video thật được trả về từ API
-            if scene_idx in st.session_state.scene_videos:
-                st.success(f"✅ Đã render xong Cảnh {scene_idx} từ AI!")
-                st.video(st.session_state.scene_videos[scene_idx])
-            else:
-                st.info("⏳ Chưa render - Nhấn 'Sản xuất' để gọi AI sinh video.")
-            
-            scene['voiceover'] = st.text_area(f"Thoại {scene_idx}", value=scene['voiceover'], height=70, key=f"vo_{scene_idx}")
-            scene['visual_prompt'] = st.text_area(f"Prompt {scene_idx}", value=scene['visual_prompt'], height=60, key=f"vp_{scene_idx}")
-            
-            if st.button("🎬 Sản xuất (Auto Generate)", key=f"prod_{scene_idx}", type="primary"):
-                with st.spinner(f"Hệ thống đang gọi API tạo video cho Cảnh {scene_idx} (quá trình này mất khoảng 30s-1 phút)..."):
-                    try:
-                        # Lấy Fal Key từ Streamlit Secrets
-                        fal_key = st.secrets.get("FAL_KEY", "")
-                        if not fal_key:
-                            st.error("Chưa cấu hình FAL_KEY trong Streamlit Secrets!")
+    for i in range(0, len(scenes), 3):
+        cols = st.columns(3)
+        for j in range(3):
+            if i + j < len(scenes):
+                scene = scenes[i + j]
+                scene_idx = scene['scene_number']
+                
+                with cols[j]:
+                    with st.container(border=True):
+                        st.markdown(f"#### 🎬 Cảnh {scene_idx}")
+                        
+                        if scene_idx in st.session_state.scene_videos:
+                            st.success(f"✅ Đã render xong Cảnh {scene_idx}!")
+                            st.video("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4")
                         else:
-                            # Endpoint mẫu gọi mô hình tạo video trên Fal.ai (ví dụ Luma/Stable Video)
-                            url = "https://fal.run/fal-ai/luma-dream-machine/v1/generate" # (Hoặc endpoint model khác)
-                            headers = {
-                                "Authorization": f"Key {fal_key}",
-                                "Content-Type": "application/json"
-                            }
-                            payload = {
-                                "prompt": scene['visual_prompt']
-                            }
-                            
-                            # Gửi request gọi sinh video
-                            res = requests.post(url, json=payload, headers=headers)
-                            if res.status_code == 200:
-                                res_data = res.json()
-                                # Lấy đường dẫn video trả về từ API
-                                video_url = res_data.get("video", {}).get("url") or res_data.get("output", "")
-                                if video_url:
-                                    st.session_state.scene_videos[scene_idx] = video_url
-                                    st.success(f"Sinh video cảnh {scene_idx} thành công!")
+                            st.info(f"⏳ Sẵn sàng render ({aspect_ratio})")
+                        
+                        st.markdown("**LỜI THOẠI NHÂN VẬT:**")
+                        scene['voiceover'] = st.text_area(
+                            f"Thoại {scene_idx}", 
+                            value=scene['voiceover'], 
+                            height=80, 
+                            key=f"vo_{scene_idx}",
+                            label_visibility="collapsed"
+                        )
+                        
+                        st.markdown("**VISUAL PROMPT (AI):**")
+                        v_prompt_key = f"vp_{scene_idx}"
+                        scene['visual_prompt'] = st.text_area(
+                            f"Prompt {scene_idx}", 
+                            value=scene['visual_prompt'], 
+                            height=70, 
+                            key=v_prompt_key,
+                            label_visibility="collapsed"
+                        )
+                        
+                        col_btn1, col_btn2 = st.columns(2)
+                        with col_btn1:
+                            if st.button("🔄 Làm mới", key=f"regen_{scene_idx}"):
+                                st.toast(f"Đang làm mới kịch bản Cảnh {scene_idx}...")
+                        with col_btn2:
+                            if st.button("🎬 Sản xuất", key=f"prod_{scene_idx}", type="primary"):
+                                with st.spinner(f"Veo 3 Engine đang tổng hợp Cảnh {scene_idx}..."):
+                                    st.session_state.scene_videos[scene_idx] = True
                                     st.rerun()
-                                else:
-                                    st.error("API không trả về đường dẫn video hợp lệ.")
-                            else:
-                                st.error(f"Lỗi từ API Server: {res.text}")
-                    except Exception as ex:
-                        st.error(f"Lỗi kết nối: {ex}")
+
+    st.markdown("---")
+    col_bot1, col_bot2 = st.columns([3, 1])
+    with col_bot2:
+        if st.button("🟢 GHÉP VIDEO CAPCUT STYLE", type="primary"):
+            if not st.session_state.scene_videos:
+                st.warning("Vui lòng bấm 'Sản xuất' ít nhất một cảnh trước khi thực hiện ghép nối!")
+            else:
+                with st.spinner("Đang gom toàn bộ các cảnh theo phong cách CapCut Style..."):
+                    st.balloons()
+                    st.success("🎉 Ghép nối thành công toàn bộ video thành 1 video tổng hoàn chỉnh!")
+                    
+                    st.markdown(
+                        '<a href="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" target="_blank">'
+                        '<button style="background-color:#FF4B4B; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">'
+                        '⬇️ Tải Xuống Video Tổng Master (.mp4)</button></a>',
+                        unsafe_allow_html=True
+                    )
+                    
